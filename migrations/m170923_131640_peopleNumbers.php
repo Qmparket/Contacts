@@ -30,13 +30,22 @@ class m170923_131640_peopleNumbers extends Migration
               'person_id' => Schema::TYPE_INTEGER,
               'number' => Schema::TYPE_STRING,
               'type' => Schema::TYPE_STRING,
+              'created_at' => Schema::TYPE_DATETIME,
           ], $tableOptions);
+
+          $this->addForeignKey(
+            'fk-phoneNumber-person_id',
+            'phoneNumber',
+            'person_id',
+            'person',
+            'id',
+            'CASCADE'
+        );
     }
 
     public function down()
     {
-        echo "m170923_131640_peopleNumbers cannot be reverted.\n";
-
-        return false;
+        $this->dropTable('');
+        
     }
 }

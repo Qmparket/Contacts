@@ -6,8 +6,8 @@ use yii\helpers\Html;
 /* @var $this yii\web\View */
 /* @var $model app\models\Person */
 
-$this->title = 'Create Person';
-$this->params['breadcrumbs'][] = ['label' => 'People', 'url' => ['index']];
+$this->title = 'New Contact';
+$this->params['breadcrumbs'][] = ['label' => 'contacts', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 <div class="person-create">
@@ -16,7 +16,7 @@ $this->params['breadcrumbs'][] = $this->title;
 
     <?= $this->render('_form', [
         'model' => $model,
-        'number' => $number,
+        'modelsPhoneNumber' => $modelsPhoneNumber,
     ]) ?>
 
 </div>

@@ -6,9 +6,11 @@ use Yii;
 use app\models\Person;
 use app\models\PhoneNumber;
 use app\models\PersonSearch;
+use app\models\Model;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+
 
 /**
  * PersonController implements the CRUD actions for Person model.
@@ -64,35 +66,57 @@ class PersonController extends Controller
      */
     public function actionCreate()
     {   
-        $br=0;
+       
         $model = new Person();
-        $number = new PhoneNumber();
-        if ($model->load(Yii::$app->request->post()) && $number->load(Yii::$app->request->post())) {
+        $modelsPhoneNumber = [new PhoneNumber];
+        $br=0;
+        
+        if ($model->load(Yii::$app->request->post()) && $model->save()) {
+            $modelsPhoneNumber = Model::createMultiple(PhoneNumber::classname());
+            Model::loadMultiple($modelsPhoneNumber, Yii::$app->request->post());
             date_default_timezone_set('Europe/Sofia');
-          $model->created_at = date('Y-m-d H:i:s');
-          $model->phone_number_count = 0;
-          $model->save();
-          $number->person_id=$model->id;
-          
-          if(!empty($number->number))
-          {
-            $br+=1;
-            $model->phone_number_count = $br;
-            $model->save();
-            $number->save();
-          }
-
-
-             return $this->redirect(['view', 'id' => $model->id]);             
+            $model->created_at = date('Y-m-d H:i:s');
            
-        } 
 
-
+            // validate all models
+            $valid = $model->validate();
+            $valid = Model::validateMultiple($modelsPhoneNumber) && $valid;
+            
+            if ($valid) {
+                $transaction = \Yii::$app->db->beginTransaction();
+                try {
+                    if ($flag = $model->save(false)) {
+                        foreach ($modelsPhoneNumber as $modelPhoneNumber) {
+                            $modelPhoneNumber->person_id = $model->id;
+                            $modelPhoneNumber->created_at = date('Y-m-d H:i:s');
+                            $br++;
+                            $model->phone_number_count = $br;
+                            $model->save();
+                            if (! ($flag = $modelPhoneNumber->save(false))) {
+                                $transaction->rollBack();
+                                break;
+                            }
+                        }
+                    }
+                    if ($flag) {
+                        $transaction->commit();
+                        return $this->redirect(['view', 'id' => $model->id]);
+                    }
+                } catch (Exception $e) {
+                    $transaction->rollBack();
+                }
+            }
+        } else {
         return $this->render('create', [
             'model' => $model,
-            'number' => $number,
+            'modelsPhoneNumber' => (empty($modelsPhoneNumber)) ? [new PhoneNumber] : $modelsPhoneNumber,
         ]);
     }
+        
+    }
+    
+
+    
 
     /**
      * Updates an existing Person model.
@@ -102,21 +126,51 @@ class PersonController extends Controller
      */
     public function actionUpdate($id)
     {
-        $person_id=$id;
         $model = $this->findModel($id);
-        $number = $this->findModel($person_id);
+        $modelsPhoneNumber = $model->id;
 
-         if ($model->load(Yii::$app->request->post())) {
-            date_default_timezone_set('Europe/Sofia');
-          $model->updated_at = date('Y-m-d H:i:s');
-           if ($model->save()) {             
-             return $this->redirect(['view', 'id' => $model->id]);             
-           } 
-        } 
+        if ($model->load(Yii::$app->request->post())) {
+
+            $oldIDs = ArrayHelper::map($modelsPhoneNumber, 'id', 'id');
+            $modelsPhoneNumber = Model::createMultiple(PhoneNumber::classname(), $modelsPhoneNumber);
+            Model::loadMultiple($modelsPhoneNumber, Yii::$app->request->post());
+            $deletedIDs = array_diff($oldIDs, array_filter(ArrayHelper::map($modelsPhoneNumber, 'id', 'id')));
+
+            // validate all models
+            $valid = $model->validate();
+            $valid = Model::validateMultiple($modelsPhoneNumber) && $valid;
+
+            if ($valid) {
+                $transaction = \Yii::$app->db->beginTransaction();
+                try {
+                    if ($flag = $model->save(false)) {
+                        if (! empty($deletedIDs)) {
+                            Address::deleteAll(['id' => $deletedIDs]);
+                        }
+                        foreach ($modelsPhoneNumber as $modelPhoneNumber) {
+                            $modelPhoneNumber->customer_id = $model->id;
+                            if (! ($flag = $modelPhoneNumber->save(false))) {
+                                $transaction->rollBack();
+                                break;
+                            }
+                        }
+                    }
+                    if ($flag) {
+                        $transaction->commit();
+                        return $this->redirect(['view', 'id' => $model->id]);
+                    }
+                } catch (Exception $e) {
+                    $transaction->rollBack();
+                }
+            }
+        }
+        else{
 
         return $this->render('update', [
             'model' => $model,
+            'modelsPhoneNumber' => (empty($modelsPhoneNumber)) ? [new PhoneNumber] : $modelsPhoneNumber,
         ]);
+    }
     }
 
     /**

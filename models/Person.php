@@ -32,9 +32,10 @@ class Person extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            [['first_name','last_name'],'required'],
             [['phone_number_count'], 'integer'],
             [['created_at', 'updated_at'], 'safe'],
-            [['first_name', 'last_name'], 'string', 'max' => 255],
+            [['first_name', 'last_name'], 'string','min'=>3, 'max' => 255],
         ];
     }
 

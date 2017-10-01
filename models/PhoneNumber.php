@@ -28,6 +28,8 @@ class PhoneNumber extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            [['number'],'required'],
+            [['number'],'integer'],
             [['person_id'], 'integer'],
             [['number', 'type'], 'string', 'max' => 255],
         ];
@@ -46,3 +48,6 @@ class PhoneNumber extends \yii\db\ActiveRecord
         ];
     }
 }
+
+
+
